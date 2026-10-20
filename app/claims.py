@@ -31,7 +31,7 @@ def validate_claim(claim: dict, warranty_start: date, warranty_end: date) -> Res
         reasons.append("repair date outside warranty period")
 
     amount = claim["amount"]
-    if amount <= 0:
+    if amount < 0:
         reasons.append("amount must be positive")
 
     if reasons:
