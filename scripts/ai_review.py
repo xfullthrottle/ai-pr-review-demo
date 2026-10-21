@@ -12,6 +12,7 @@ Guardrails:
 import json
 import os
 import sys
+import urllib.error
 import urllib.request
 
 API_URL = "https://api.anthropic.com/v1/messages"
@@ -56,8 +57,17 @@ def main(diff_path: str, out_path: str) -> int:
             headers={"x-api-key": key, "anthropic-version": "2023-06-01",
                      "content-type": "application/json"},
         )
-        with urllib.request.urlopen(req, timeout=120) as resp:
-            data = json.load(resp)
+        try:
+            with urllib.request.urlopen(req, timeout=120) as resp:
+                data = json.load(resp)
+        except urllib.error.HTTPError as e:
+            # Advisory step: report the API error on the PR instead of failing CI
+            detail = e.read().decode(errors="replace")[:500]
+            body = f"AI review unavailable: Claude API returned HTTP {e.code}.\n\n```\n{detail}\n```"
+            with open(out_path, "w", encoding="utf-8") as f:
+                f.write(body)
+            print(body)
+            return 0
 
         review = "".join(b.get("text", "") for b in data["content"] if b["type"] == "text")
         usage = data.get("usage", {})
